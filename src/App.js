@@ -8,7 +8,6 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/sign-up" element={<SignUpPage />} />
-          asasaaas
         </Routes>
       </AuthProvider>
     </div>

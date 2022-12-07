@@ -3,10 +3,17 @@ import Field from "components/field/Field";
 import { IconEyeClose, IconEyeOpen } from "components/icon";
 import { Input } from "components/input";
 import { Label } from "components/label";
-import { LoadingSpinner } from "components/loading";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import styled from "styled-components";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useEffect } from "react";
+import { toast } from "react-toastify";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth, db } from "firebase-app/firebase-config";
+import { useNavigate } from "react-router-dom";
+import { addDoc, collection } from "firebase/firestore";
 
 const SignUpPageStyles = styled.div`
   min-height: 100vh;
@@ -28,7 +35,20 @@ const SignUpPageStyles = styled.div`
   }
 `;
 
+const schema = yup.object({
+  fullName: yup.string().required("Please enter your fullname"),
+  email: yup
+    .string()
+    .email("Please enter valid email address")
+    .required("Please enter your email address"),
+  password: yup
+    .string()
+    .min(8, "Your password must be at least 8 characters or greater")
+    .required("Please enter your password"),
+});
+
 const SignUpPage = () => {
+  const navigate = useNavigate();
   const {
     control,
     handleSubmit,
@@ -37,19 +57,42 @@ const SignUpPage = () => {
     reset,
   } = useForm({
     mode: "onchange",
+    resolver: yupResolver(schema),
   });
 
-  const handleSignUp = (values) => {
-    // console.log(values);
+  const handleSignUp = async (values) => {
     if (!isValid) return;
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve();
-      }, 5000);
+    console.log("handleSignUp ~ values", values);
+    const user = await createUserWithEmailAndPassword(
+      auth,
+      values.email,
+      values.password
+    );
+
+    await updateProfile(auth.currentUser, {
+      displayName: values.fullName,
     });
+    const colRef = collection(db, "users");
+    await addDoc(colRef, {
+      fullName: values.fullName,
+      email: values.email,
+      password: values.password,
+    });
+    toast.success("Register successfully!!!");
+    navigate("/");
   };
 
   const [togglePassword, setTogglePassword] = useState(false);
+
+  useEffect(() => {
+    const arrErroes = Object.values(errors);
+    if (arrErroes.length > 0) {
+      toast.error(arrErroes[0]?.message, {
+        pauseOnHover: false,
+        delay: 0,
+      });
+    }
+  }, [errors]);
 
   return (
     <SignUpPageStyles>
